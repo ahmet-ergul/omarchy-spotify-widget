@@ -1,0 +1,67 @@
+#!/bin/bash
+# Spotify window/process control used by the kima.spotify bar widget and SUPER+W.
+#   spotify-ctl show   bring the Spotify window to the current workspace (launch if needed)
+#   spotify-ctl hide   park the Spotify window on the hidden special:spotify workspace
+#   spotify-ctl toggle show if hidden/unfocused, hide otherwise
+#   spotify-ctl quit   really close Spotify
+
+HIDDEN="special:spotify"
+
+client() {
+  hyprctl clients -j | jq -c 'map(select(.class == "Spotify")) | first // empty'
+}
+
+dispatch() {
+  hyprctl dispatch "$1" >/dev/null
+}
+
+show() {
+  local c addr ws current
+  c=$(client)
+  if [[ -z $c ]]; then
+    setsid uwsm-app -- spotify-launcher >/dev/null 2>&1 &
+    return
+  fi
+  addr=$(jq -r .address <<<"$c")
+  ws=$(jq -r .workspace.name <<<"$c")
+  if [[ $ws == special:* ]]; then
+    current=$(hyprctl activeworkspace -j | jq -r .id)
+    dispatch "hl.dsp.window.move({ workspace = \"$current\", window = \"address:$addr\" })"
+  fi
+  dispatch "hl.dsp.focus({ window = \"address:$addr\" })"
+}
+
+hide() {
+  local addr
+  addr=$(client | jq -r '.address // empty')
+  [[ -n $addr ]] && dispatch "hl.dsp.window.move({ workspace = \"$HIDDEN\", follow = false, window = \"address:$addr\" })"
+}
+
+toggle() {
+  local c active
+  c=$(client)
+  active=$(hyprctl activewindow -j | jq -r '.class // empty')
+  if [[ -n $c && $active == "Spotify" ]]; then hide; else show; fi
+}
+
+quit() {
+  local addr
+  addr=$(client | jq -r '.address // empty')
+  [[ -n $addr ]] && dispatch "hl.dsp.window.close({ window = \"address:$addr\" })"
+  for _ in $(seq 20); do
+    pgrep -x spotify >/dev/null || exit 0
+    sleep 0.1
+  done
+  pkill -x spotify
+  sleep 1
+  pkill -9 -x spotify 2>/dev/null
+  exit 0
+}
+
+case "$1" in
+  show) show ;;
+  hide) hide ;;
+  toggle) toggle ;;
+  quit) quit ;;
+  *) echo "Usage: spotify-ctl show|hide|toggle|quit" >&2; exit 1 ;;
+esac

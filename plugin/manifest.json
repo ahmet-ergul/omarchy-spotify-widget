@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "kima.spotify",
+  "name": "Spotify",
+  "version": "1.0.0",
+  "author": "kima",
+  "description": "Always-on Spotify widget with a now-playing popup",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": {
+    "displayName": "Spotify",
+    "description": "Spotify now-playing, playback, shuffle/repeat, open and quit",
+    "category": "Media",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": { "maxLabelWidth": 180 },
+    "schema": [
+      { "key": "maxLabelWidth", "type": "number", "label": "Max title width" }
+    ]
+  }
+}
